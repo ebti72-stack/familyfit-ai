@@ -9,6 +9,7 @@ import { FOODS, type Allergen } from '../data/foods';
 import { RECIPES, type Recipe } from '../data/recipes';
 import { scaleNutrients, sumNutrients, type Remaining } from './nutrition';
 import type { MealType, Nutrients } from './types';
+import { FASTING_SHARE } from './fasting';
 
 export interface NextMealProfile {
   allergies: string[];
@@ -35,6 +36,15 @@ export interface NextMealInput {
   recentRecipeIds: string[];
   excludeIds?: string[];
   mealTypeOverride?: MealType;
+  /** Fasting today: meals become iftar → evening snack → suhoor. The daily goal is NOT reduced. */
+  fasting?: boolean;
+  /** User/family recipes (one serving each) considered alongside the built-in ones. */
+  extraRecipes?: Recipe[];
+  favoriteIngredients?: string[];
+  /** Recipes the member rated 4–5 stars. */
+  likedRecipeIds?: string[];
+  /** "Suggest from my favourites first". */
+  favoritesFirst?: boolean;
 }
 
 export interface PlannedIngredient {
@@ -64,7 +74,10 @@ export interface NextMealResult {
   suggestions: MealSuggestion[];
 }
 
-const SHARE: Record<MealType, number> = { breakfast: 0.25, lunch: 0.35, snack: 0.1, dinner: 0.3 };
+const SHARE: Record<MealType, number> = { breakfast: 0.25, lunch: 0.35, snack: 0.1, dinner: 0.3, suhoor: FASTING_SHARE.suhoor, iftar: FASTING_SHARE.iftar };
+const FASTING_ORDER: MealType[] = ['iftar', 'snack', 'suhoor'];
+/** Which recipe meal types can serve a fasting meal. */
+const POOL_TYPES: Partial<Record<MealType, MealType[]>> = { suhoor: ['breakfast', 'lunch'], iftar: ['lunch', 'dinner'] };
 const ORDER: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
 export function mealTypeForTime(now: Date): MealType {
@@ -77,7 +90,8 @@ export function mealTypeForTime(now: Date): MealType {
 }
 
 /** What share of today's remaining macros this meal should cover. */
-export function mealTarget(input: Pick<NextMealInput, 'dailyKcalGoal' | 'remaining' | 'now' | 'mealsLoggedToday' | 'mealTypeOverride'>): { mealType: MealType; target: Remaining } {
+export function mealTarget(input: Pick<NextMealInput, 'dailyKcalGoal' | 'remaining' | 'now' | 'mealsLoggedToday' | 'mealTypeOverride' | 'fasting'>): { mealType: MealType; target: Remaining } {
+  if (input.fasting) return fastingTarget(input);
   const mealType = input.mealTypeOverride ?? mealTypeForTime(input.now);
   const h = input.now.getHours();
   const idx = ORDER.indexOf(mealType);
@@ -100,14 +114,29 @@ export function mealTarget(input: Pick<NextMealInput, 'dailyKcalGoal' | 'remaini
   };
 }
 
+/** Fasting day: iftar first, then a light evening snack, then suhoor — same daily total, no deficit. */
+function fastingTarget(input: Pick<NextMealInput, 'dailyKcalGoal' | 'remaining' | 'mealsLoggedToday' | 'mealTypeOverride'>): { mealType: MealType; target: Remaining } {
+  const open = FASTING_ORDER.filter((m) => !input.mealsLoggedToday.includes(m));
+  const mealType = input.mealTypeOverride ?? open[0] ?? 'suhoor';
+  const share = (m: MealType) => (m === 'snack' ? FASTING_SHARE.snack : SHARE[m]);
+  const ahead = open.filter((m) => m !== mealType);
+  let frac = share(mealType) / (share(mealType) + ahead.reduce((s, m) => s + share(m), 0));
+  const capKcal = input.dailyKcalGoal * share(mealType) * 1.4;
+  if (input.remaining.kcal * frac > capKcal) frac = capKcal / Math.max(1, input.remaining.kcal);
+  return {
+    mealType,
+    target: { kcal: input.remaining.kcal * frac, protein: input.remaining.protein * frac, carbs: input.remaining.carbs * frac, fat: input.remaining.fat * frac },
+  };
+}
+
 function recipeAllergens(foods: string[]): Set<Allergen> {
   const s = new Set<Allergen>();
   foods.forEach((f) => FOODS[f]?.allergens.forEach((a) => s.add(a)));
   return s;
 }
 
-const MEAT = new Set(['chicken_breast', 'lean_beef']);
-const SEAFOOD = new Set(['salmon', 'tuna', 'shrimp']);
+const MEAT = new Set(['chicken_breast', 'lean_beef', 'chicken_raw', 'chicken_thigh_raw', 'beef_raw', 'lean_beef_raw']);
+const SEAFOOD = new Set(['salmon', 'tuna', 'shrimp', 'salmon_raw', 'shrimp_raw']);
 
 function foodAllowed(food: string, p: NextMealProfile): boolean {
   const item = FOODS[food];
@@ -195,6 +224,8 @@ interface Scored {
   autoSwapped: { from: string; to: string }[];
   vegGrams: number;
   pantryShare: number;
+  isFav: boolean;
+  favIng: number;
 }
 
 function scoreRecipe(r: Recipe, input: NextMealInput, target: Remaining, scaleRange: [number, number]): Scored | null {
@@ -212,14 +243,24 @@ function scoreRecipe(r: Recipe, input: NextMealInput, target: Remaining, scaleRa
   const pantryShare = input.prefs.pantry.length ? foods.filter((f) => input.prefs.pantry.includes(f)).length / foods.length : 0;
   const vegGrams = best.ings.filter((i) => FOODS[i.food].category === 'vegetable' || FOODS[i.food].category === 'fruit').reduce((a, i) => a + i.grams, 0);
   let score = best.err;
-  if (input.prefs.favorites.includes(r.id)) score -= 0.08;
+  const isFav = input.prefs.favorites.includes(r.id);
+  // Favourites first: a favourite that fits well jumps ahead; one that fits poorly still loses to a good new recipe.
+  if (isFav) score -= input.favoritesFirst ? (best.err < 0.45 ? 0.3 : 0.1) : 0.08;
+  if (input.likedRecipeIds?.includes(r.id)) score -= 0.05;
+  const favIng = input.favoriteIngredients?.length ? foods.filter((f) => input.favoriteIngredients!.includes(f)).length / foods.length : 0;
+  score -= (input.favoritesFirst ? 0.12 : 0.05) * favIng;
+  if (input.fasting) {
+    // Suhoor: slow carbs, protein and fibre; iftar: hydrating vegetables/fruit. Never fewer calories.
+    const fib = best.totals.fiber;
+    score -= Math.min(fib, 10) / 200 + Math.min(vegGrams, 250) / 2500;
+  }
   score -= 0.06 * pantryShare;
   const recentIdx = input.recentRecipeIds.indexOf(r.id);
   if (recentIdx >= 0 && recentIdx < 3) score += 0.25; // eaten very recently
   else if (recentIdx >= 0) score += 0.08;
   if (r.cost > input.prefs.budgetTier) score += 0.06 * (r.cost - input.prefs.budgetTier);
   if (input.profile.isMinor && !r.kidFriendly) score += 0.05;
-  return { recipe: r, ingredients: best.ings, totals: best.totals, err: best.err, score, autoSwapped: adapted.autoSwapped, vegGrams, pantryShare };
+  return { recipe: r, ingredients: best.ings, totals: best.totals, err: best.err, score, autoSwapped: adapted.autoSwapped, vegGrams, pantryShare, isFav, favIng };
 }
 
 function reasonsFor(s: Scored, target: Remaining, kind: SuggestionKind): MealSuggestion['reasons'] {
@@ -231,6 +272,8 @@ function reasonsFor(s: Scored, target: Remaining, kind: SuggestionKind): MealSug
   if (s.totals.fiber >= 6) out.push({ key: 'nm.reason.fiber', params: { g: Math.round(s.totals.fiber) } });
   if (s.vegGrams >= 150) out.push({ key: 'nm.reason.veg' });
   if (s.pantryShare >= 0.5) out.push({ key: 'nm.reason.pantry' });
+  if (s.isFav) out.push({ key: 'nm.reason.favorite' });
+  else if (s.favIng >= 0.34) out.push({ key: 'nm.reason.favIngredients' });
   if (s.autoSwapped.length) out.push({ key: 'nm.reason.adapted' });
   return out;
 }
@@ -242,7 +285,10 @@ export function recommendNextMeal(input: NextMealInput): NextMealResult {
   let mode: NextMealResult['mode'] = 'normal';
 
   // Very little left: offer light options instead of pushing the user to "use up" the budget.
-  if (input.remaining.kcal < 60) {
+  const fastingMeal = mealType === 'suhoor' || mealType === 'iftar';
+  if (fastingMeal) {
+    // Fasting meals are never shrunk into "light" mode: the daily goal stays whole.
+  } else if (input.remaining.kcal < 60) {
     mode = 'goal_reached';
     mealType = 'snack';
     target = { kcal: 100, protein: Math.min(8, input.remaining.protein || 8), carbs: 10, fat: 3 };
@@ -253,8 +299,10 @@ export function recommendNextMeal(input: NextMealInput): NextMealResult {
   }
 
   const scaleRange: [number, number] = mode !== 'normal' ? [0.5, 1.0] : input.profile.isMinor ? [0.5, 1.2] : [0.6, 1.6];
-  const pool = RECIPES.filter(
-    (r) => r.mealTypes.includes(mealType) && !input.prefs.rejected.includes(r.id) && !(input.excludeIds ?? []).includes(r.id),
+  const types = POOL_TYPES[mealType] ?? [mealType];
+  const all = [...RECIPES, ...(input.extraRecipes ?? [])];
+  const pool = all.filter(
+    (r) => r.mealTypes.some((m) => types.includes(m) || m === mealType) && !input.prefs.rejected.includes(r.id) && !(input.excludeIds ?? []).includes(r.id),
   );
   const scored = pool
     .map((r) => scoreRecipe(r, input, target, scaleRange))

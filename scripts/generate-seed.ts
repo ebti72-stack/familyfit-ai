@@ -5,6 +5,7 @@
 import { writeFileSync } from 'node:fs';
 import { FOODS, FOOD_SOURCE } from '../src/data/foods';
 import { RECIPES } from '../src/data/recipes';
+import { SUB_RULES } from '../src/lib/substitutions';
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const arr = (a: string[]) => `array[${a.map(q).join(',')}]::text[]`;
@@ -28,6 +29,13 @@ for (const r of RECIPES) {
     ].join(',')}) on conflict (id) do update set ingredients=excluded.ingredients, steps_ar=excluded.steps_ar, steps_en=excluded.steps_en;`,
   );
 }
+for (const r of SUB_RULES) {
+  lines.push(
+    `insert into public.healthy_substitutions (id,from_foods,to_food,ratio,reason_ar,reason_en,taste_ar,taste_en) values (${[
+      q(r.id), arr(r.from), r.to === '=' ? 'null' : q(r.to), r.ratio, q(r.reason.ar), q(r.reason.en), q(r.taste.ar), q(r.taste.en),
+    ].join(',')}) on conflict (id) do update set from_foods=excluded.from_foods, to_food=excluded.to_food, ratio=excluded.ratio, reason_ar=excluded.reason_ar, reason_en=excluded.reason_en, taste_ar=excluded.taste_ar, taste_en=excluded.taste_en;`,
+  );
+}
 lines.push('commit;', '');
 writeFileSync(new URL('../supabase/seed.sql', import.meta.url), lines.join('\n'));
-console.log(`seed.sql: ${Object.keys(FOODS).length} foods, ${RECIPES.length} recipes`);
+console.log(`seed.sql: ${Object.keys(FOODS).length} foods, ${RECIPES.length} recipes, ${SUB_RULES.length} substitutions`);

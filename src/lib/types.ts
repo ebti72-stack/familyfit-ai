@@ -19,7 +19,7 @@ export type HealthGoal =
   | 'hydration_sleep'
   | 'weight_loss'
   | 'weight_gain';
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'suhoor' | 'iftar';
 export type MemberRole = 'admin' | 'adult' | 'teen' | 'child';
 export type LogSource = 'manual' | 'barcode' | 'recipe' | 'next_meal' | 'photo' | 'label_ocr';
 

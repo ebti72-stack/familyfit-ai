@@ -14,6 +14,7 @@ import { awardEarnedHabits, useToast } from '../../state/actions';
 import { useApp } from '../../state/app';
 import { useDay } from '../../state/useDay';
 import { brand, radius } from '../../theme';
+import { FastingCard } from '../../components/FastingCard';
 
 export default function Dashboard() {
   const { t, n } = useI18n();
@@ -143,6 +144,8 @@ export default function Dashboard() {
                 </View>
               </Card>
             </Row>
+
+            <FastingCard variant="dashboard" />
 
             {/* AI next meal */}
             <Card tone="alt" onPress={() => router.push('/next-meal')}>

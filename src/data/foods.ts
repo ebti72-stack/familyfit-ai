@@ -12,7 +12,9 @@ export interface FoodItem {
   id: string;
   ar: string;
   en: string;
-  category: 'protein' | 'grain' | 'dairy' | 'fruit' | 'vegetable' | 'legume' | 'fat' | 'nuts' | 'sweet';
+  category: 'protein' | 'grain' | 'dairy' | 'fruit' | 'vegetable' | 'legume' | 'fat' | 'nuts' | 'sweet' | 'condiment';
+  /** Recipe-only ingredients (raw/dry forms, cooking fats, sauces) are not offered as standalone meal swaps. */
+  recipeOnly?: boolean;
   per100: Nutrients;
   allergens: Allergen[];
   /** Typical cost tier 1 (cheap) – 3 (premium), used for the "economical" suggestion. */
@@ -83,7 +85,48 @@ export const FOODS: Record<string, FoodItem> = {
   walnuts: { id: 'walnuts', ar: 'جوز', en: 'Walnuts', category: 'nuts', per100: n(654, 15.2, 13.7, 65.2, 6.7, 2.6, 6.1, 2), allergens: ['tree_nuts'], cost: 3, aisle: 'pantry' },
   chia: { id: 'chia', ar: 'بذور الشيا', en: 'Chia seeds', category: 'nuts', per100: n(486, 16.5, 42.1, 30.7, 34.4, 0, 3.3, 16), allergens: [], cost: 2, aisle: 'pantry' },
   honey: { id: 'honey', ar: 'عسل', en: 'Honey', category: 'sweet', per100: n(304, 0.3, 82.4, 0, 0.2, 82.1, 0, 4), allergens: [], cost: 2, aisle: 'pantry' },
+
+  // ---------- Recipe ingredients (raw / dry forms, fats, sauces) — used by the recipe analyzer ----------
+  chicken_raw: { id: 'chicken_raw', ar: 'صدر دجاج نيء', en: 'Raw chicken breast', category: 'protein', per100: n(120, 22.5, 0, 2.6, 0, 0, 0.6, 45), allergens: [], cost: 2, aisle: 'meat_fish', recipeOnly: true },
+  chicken_thigh_raw: { id: 'chicken_thigh_raw', ar: 'أفخاذ دجاج نيئة بدون جلد', en: 'Raw skinless chicken thigh', category: 'protein', per100: n(121, 19.7, 0, 4.1, 0, 0, 1, 95), allergens: [], cost: 1, aisle: 'meat_fish', recipeOnly: true },
+  beef_raw: { id: 'beef_raw', ar: 'لحم بقري مفروم نيء (15% دهن)', en: 'Raw ground beef (85/15)', category: 'protein', per100: n(215, 18.6, 0, 15, 0, 0, 5.9, 66), allergens: [], cost: 2, aisle: 'meat_fish', recipeOnly: true },
+  lean_beef_raw: { id: 'lean_beef_raw', ar: 'لحم بقري مفروم نيء قليل الدهن (5%)', en: 'Raw lean ground beef (95/5)', category: 'protein', per100: n(137, 21.4, 0, 5, 0, 0, 2.3, 66), allergens: [], cost: 3, aisle: 'meat_fish', recipeOnly: true },
+  salmon_raw: { id: 'salmon_raw', ar: 'سلمون نيء', en: 'Raw salmon', category: 'protein', per100: n(208, 20.4, 0, 13.4, 0, 0, 3.1, 59), allergens: ['fish'], cost: 3, aisle: 'meat_fish', recipeOnly: true },
+  shrimp_raw: { id: 'shrimp_raw', ar: 'روبيان نيء', en: 'Raw shrimp', category: 'protein', per100: n(85, 20.1, 0, 0.5, 0, 0, 0.1, 119), allergens: ['shellfish'], cost: 3, aisle: 'meat_fish', recipeOnly: true },
+  egg_raw: { id: 'egg_raw', ar: 'بيض', en: 'Egg', category: 'protein', per100: n(143, 12.6, 0.7, 9.5, 0, 0.4, 3.1, 142), allergens: ['eggs'], cost: 1, aisle: 'dairy_eggs', recipeOnly: true },
+  milk_whole: { id: 'milk_whole', ar: 'حليب كامل الدسم', en: 'Whole milk', category: 'dairy', per100: n(61, 3.2, 4.8, 3.3, 0, 5.1, 1.9, 43), allergens: ['milk'], cost: 1, aisle: 'dairy_eggs', recipeOnly: true },
+  heavy_cream: { id: 'heavy_cream', ar: 'كريمة طبخ ثقيلة', en: 'Heavy cream', category: 'dairy', per100: n(340, 2.8, 2.7, 36.1, 0, 2.9, 23, 27), allergens: ['milk'], cost: 2, aisle: 'dairy_eggs', recipeOnly: true },
+  cream_cheese: { id: 'cream_cheese', ar: 'جبنة كريمية', en: 'Cream cheese', category: 'dairy', per100: n(342, 5.9, 4.1, 34.2, 0, 3.2, 19.3, 321), allergens: ['milk'], cost: 2, aisle: 'dairy_eggs', recipeOnly: true },
+  cheddar: { id: 'cheddar', ar: 'جبنة شيدر', en: 'Cheddar cheese', category: 'dairy', per100: n(403, 24.9, 1.3, 33.1, 0, 0.5, 18.9, 621), allergens: ['milk'], cost: 2, aisle: 'dairy_eggs', recipeOnly: true },
+  parmesan: { id: 'parmesan', ar: 'جبنة بارميزان', en: 'Parmesan cheese', category: 'dairy', per100: n(392, 35.8, 3.2, 25.8, 0, 0.8, 16.4, 1529), allergens: ['milk'], cost: 3, aisle: 'dairy_eggs', recipeOnly: true },
+  butter: { id: 'butter', ar: 'زبدة', en: 'Butter', category: 'fat', per100: n(717, 0.9, 0.1, 81.1, 0, 0.1, 51.4, 643), allergens: ['milk'], cost: 2, aisle: 'dairy_eggs', recipeOnly: true },
+  veg_oil: { id: 'veg_oil', ar: 'زيت نباتي (كانولا/دوار الشمس)', en: 'Vegetable oil (canola/sunflower)', category: 'fat', per100: n(884, 0, 0, 100, 0, 0, 7.4, 0), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  mayonnaise: { id: 'mayonnaise', ar: 'مايونيز', en: 'Mayonnaise', category: 'condiment', per100: n(680, 1, 0.6, 74.9, 0, 0.6, 11.7, 635), allergens: ['eggs'], cost: 1, aisle: 'pantry', recipeOnly: true },
+  rice_white_dry: { id: 'rice_white_dry', ar: 'أرز أبيض غير مطبوخ', en: 'White rice, uncooked', category: 'grain', per100: n(365, 7.1, 80, 0.7, 1.3, 0.1, 0.2, 5), allergens: [], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  rice_brown_dry: { id: 'rice_brown_dry', ar: 'أرز بني غير مطبوخ', en: 'Brown rice, uncooked', category: 'grain', per100: n(367, 7.5, 76.2, 3.2, 3.6, 0.7, 0.6, 7), allergens: [], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  pasta_dry: { id: 'pasta_dry', ar: 'معكرونة بيضاء غير مطبوخة', en: 'White pasta, dry', category: 'grain', per100: n(371, 13, 74.7, 1.5, 3.2, 2.7, 0.3, 6), allergens: ['gluten'], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  ww_pasta_dry: { id: 'ww_pasta_dry', ar: 'معكرونة قمح كامل غير مطبوخة', en: 'Whole-wheat pasta, dry', category: 'grain', per100: n(352, 14.6, 71.3, 2.9, 10.7, 3.6, 0.5, 8), allergens: ['gluten'], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  white_pasta: { id: 'white_pasta', ar: 'معكرونة بيضاء مطبوخة', en: 'Cooked white pasta', category: 'grain', per100: n(158, 5.8, 30.9, 0.9, 1.8, 0.6, 0.2, 1), allergens: ['gluten'], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  flour_white: { id: 'flour_white', ar: 'دقيق أبيض', en: 'White flour', category: 'grain', per100: n(364, 10.3, 76.3, 1, 2.7, 0.3, 0.2, 2), allergens: ['gluten'], cost: 1, aisle: 'pantry', recipeOnly: true },
+  flour_ww: { id: 'flour_ww', ar: 'دقيق قمح كامل', en: 'Whole-wheat flour', category: 'grain', per100: n(340, 13.2, 72, 2.5, 10.7, 0.4, 0.4, 2), allergens: ['gluten'], cost: 1, aisle: 'pantry', recipeOnly: true },
+  white_bread: { id: 'white_bread', ar: 'خبز أبيض', en: 'White bread', category: 'grain', per100: n(266, 7.6, 50.6, 3.3, 2.4, 5.3, 0.7, 490), allergens: ['gluten'], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  lentils_dry: { id: 'lentils_dry', ar: 'عدس جاف', en: 'Dry lentils', category: 'legume', per100: n(352, 24.6, 63.4, 1.1, 10.7, 2, 0.2, 6), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  bulgur_dry: { id: 'bulgur_dry', ar: 'برغل جاف', en: 'Dry bulgur', category: 'grain', per100: n(342, 12.3, 75.9, 1.3, 12.5, 0.4, 0.2, 17), allergens: ['gluten'], cost: 1, aisle: 'bakery_grains', recipeOnly: true },
+  quinoa_dry: { id: 'quinoa_dry', ar: 'كينوا جافة', en: 'Dry quinoa', category: 'grain', per100: n(368, 14.1, 64.2, 6.1, 7, 0, 0.7, 5), allergens: [], cost: 3, aisle: 'bakery_grains', recipeOnly: true },
+  sugar: { id: 'sugar', ar: 'سكر', en: 'Sugar', category: 'sweet', per100: n(387, 0, 100, 0, 0, 99.8, 0, 1), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  garlic: { id: 'garlic', ar: 'ثوم', en: 'Garlic', category: 'vegetable', per100: n(149, 6.4, 33.1, 0.5, 2.1, 1, 0.1, 17), allergens: [], cost: 1, aisle: 'produce', recipeOnly: true },
+  zucchini: { id: 'zucchini', ar: 'كوسا', en: 'Zucchini', category: 'vegetable', per100: n(17, 1.2, 3.1, 0.3, 1, 2.5, 0.1, 8), allergens: [], cost: 1, aisle: 'produce' },
+  eggplant: { id: 'eggplant', ar: 'باذنجان', en: 'Eggplant', category: 'vegetable', per100: n(25, 1, 5.9, 0.2, 3, 3.5, 0, 2), allergens: [], cost: 1, aisle: 'produce' },
+  cauliflower: { id: 'cauliflower', ar: 'قرنبيط', en: 'Cauliflower', category: 'vegetable', per100: n(25, 1.9, 5, 0.3, 2, 1.9, 0.1, 30), allergens: [], cost: 1, aisle: 'produce' },
+  tomato_paste: { id: 'tomato_paste', ar: 'معجون طماطم', en: 'Tomato paste', category: 'condiment', per100: n(82, 4.3, 18.9, 0.5, 4.1, 12.2, 0.1, 59), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  ketchup: { id: 'ketchup', ar: 'كاتشب', en: 'Ketchup', category: 'condiment', per100: n(101, 1, 27.4, 0.1, 0.3, 22.8, 0, 907), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  soy_sauce: { id: 'soy_sauce', ar: 'صلصة الصويا', en: 'Soy sauce', category: 'condiment', per100: n(53, 8.1, 4.9, 0.6, 0.8, 0.4, 0.1, 5493), allergens: ['soy', 'gluten'], cost: 1, aisle: 'pantry', recipeOnly: true },
+  coconut_milk: { id: 'coconut_milk', ar: 'حليب جوز الهند', en: 'Coconut milk (canned)', category: 'fat', per100: n(197, 2, 2.8, 21.3, 0, 0, 18.9, 13), allergens: [], cost: 2, aisle: 'pantry', recipeOnly: true },
+  salt: { id: 'salt', ar: 'ملح', en: 'Salt', category: 'condiment', per100: n(0, 0, 0, 0, 0, 0, 0, 38758), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  spices: { id: 'spices', ar: 'بهارات (تقريبي)', en: 'Spices (approx.)', category: 'condiment', per100: n(251, 10.4, 64, 3.3, 25.3, 0.6, 1.4, 20), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
+  water: { id: 'water', ar: 'ماء', en: 'Water', category: 'condiment', per100: n(0, 0, 0, 0, 0, 0, 0, 4), allergens: [], cost: 1, aisle: 'pantry', recipeOnly: true },
 };
+
 
 export const FOOD_SOURCE = 'USDA FoodData Central';
 

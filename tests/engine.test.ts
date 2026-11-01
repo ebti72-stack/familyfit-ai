@@ -62,9 +62,11 @@ describe('reference data', () => {
   it('food energy is consistent with Atwater factors (±20%)', () => {
     for (const f of Object.values(FOODS)) {
       const atw = f.per100.protein * 4 + f.per100.carbs * 4 + f.per100.fat * 9;
-      const diff = Math.abs(atw - f.per100.kcal);
+      // Fibre yields ~2 kcal/g rather than 4: use that variant too (matters for spices and seeds).
+      const atwFibre = atw - f.per100.fiber * 2;
+      const diff = Math.min(Math.abs(atw - f.per100.kcal), Math.abs(atwFibre - f.per100.kcal));
       // low-energy vegetables: fibre makes Atwater overshoot; allow a small absolute gap
-      expect(diff / f.per100.kcal < 0.2 || diff < 10, f.id).toBe(true);
+      expect(f.per100.kcal === 0 ? atw === 0 : diff / f.per100.kcal < 0.2 || diff < 10, f.id).toBe(true);
     }
   });
 });

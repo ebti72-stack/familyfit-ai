@@ -67,7 +67,7 @@ export default function AddFood() {
               <Row gap={8} wrap>{[50, 100, 150, 200].map((v) => <Chip key={v} label={`${v} ${t('common.g')}`} selected={g === v} onPress={() => setGrams(String(v))} />)}</Row>
               <Field label={t('add.grams')} value={grams} onChangeText={(v) => setGrams(v.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" />
               <Txt v="label" muted>{t('add.mealType')}</Txt>
-              <Row gap={8} wrap>{(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((m) => <Chip key={m} label={t(`meal.${m}` as StringKey)} selected={meal === m} onPress={() => setMeal(m)} />)}</Row>
+              <Row gap={8} wrap>{(['breakfast', 'lunch', 'dinner', 'snack', 'suhoor', 'iftar'] as MealType[]).map((m) => <Chip key={m} label={t(`meal.${m}` as StringKey)} selected={meal === m} onPress={() => setMeal(m)} />)}</Row>
               <Button title={t('add.toDay')} icon="add-circle-outline" loading={busy} disabled={g <= 0 || g > 3000} onPress={add} />
               <Txt v="caption" faint>{t('add.source')}</Txt>
             </View>

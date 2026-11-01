@@ -9,7 +9,7 @@ import type { FoodLog, MealType } from '../../lib/types';
 import { useApp } from '../../state/app';
 import { useDay } from '../../state/useDay';
 
-const ORDER: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
+const ORDER: MealType[] = ['suhoor', 'breakfast', 'lunch', 'snack', 'iftar', 'dinner'];
 
 export default function Nutrition() {
   const { t, n } = useI18n();

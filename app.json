@@ -44,7 +44,8 @@
           "recordAudioAndroid": false
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-sharing"
     ],
     "scheme": "familyfit",
     "extra": {

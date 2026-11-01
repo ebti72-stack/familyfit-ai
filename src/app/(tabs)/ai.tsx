@@ -75,6 +75,9 @@ export default function AIHub() {
         </LinearGradient>
 
         <View style={{ padding: 20, gap: 12, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
+          <Feature icon="videocam-outline" title={t('ai.recipes')} body={t('ai.recipesBody')} color={th.coral} onPress={() => router.push('/recipes/import')} />
+          <Feature icon="book-outline" title={t('ai.library')} body={t('ai.libraryBody')} color={th.primary} onPress={() => router.push('/recipes')} />
+          <Feature icon="moon-outline" title={t('ai.fasting')} body={t('ai.fastingBody')} color={th.gold} onPress={() => router.push('/fasting')} />
           <Feature icon="barcode-outline" title={t('ai.scan')} body={t('ai.scanBody')} color={th.primary} onPress={() => router.push('/scan')} />
           <Feature icon="camera-outline" title={t('ai.photo')} body={t('ai.photoBody')} color={th.coral} phase={4} />
           <Feature icon="snow-outline" title={t('ai.fridge')} body={t('ai.fridgeBody')} color={th.water} phase={5} />

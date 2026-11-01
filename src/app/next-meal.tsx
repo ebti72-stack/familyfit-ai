@@ -15,6 +15,10 @@ import type { MealType } from '../lib/types';
 import { awardEarnedHabits, useToast } from '../state/actions';
 import { useApp } from '../state/app';
 import { useDay } from '../state/useDay';
+import { useFasting } from '../state/fasting';
+import { useRecipeLibrary } from '../state/recipes';
+import { asNextMealRecipe, BUILTIN_PREFIX } from '../lib/recipe';
+import type { Recipe } from '../data/recipes';
 import { brand, radius } from '../theme';
 
 const KIND_COLOR = { best_fit: brand.gold, variety: brand.green, quick_budget: brand.coral } as const;
@@ -23,7 +27,12 @@ export default function NextMeal() {
   const { t, n, lang } = useI18n();
   const { viewingMember, prefs, savePrefs, bump, theme: th } = useApp();
   const day = useDay(viewingMember?.id);
+  const fasting = useFasting(viewingMember?.id);
+  const lib = useRecipeLibrary();
   const toast = useToast();
+  const engineId = (ref: string) => (ref.startsWith(BUILTIN_PREFIX) ? ref.slice(BUILTIN_PREFIX.length) : ref);
+  const favIds = useMemo(() => Array.from(new Set([...prefs.favoriteRecipes, ...lib.favorites.map((f) => engineId(f.ref))])), [prefs.favoriteRecipes, lib.favorites]);
+  const extraRecipes = useMemo(() => lib.recipes.map(asNextMealRecipe).filter((r): r is Recipe => !!r), [lib.recipes]);
   const [excluded, setExcluded] = useState<string[]>([]);
   const [mealOverride, setMealOverride] = useState<MealType | undefined>();
   const [cards, setCards] = useState<MealSuggestion[]>([]);
@@ -37,11 +46,16 @@ export default function NextMeal() {
       now: new Date(),
       mealsLoggedToday: Array.from(new Set(day.foodLogs.map((l) => l.mealType))),
       profile: { allergies: day.profile.allergies, dislikedFoods: day.profile.dislikedFoods, dietaryPreferences: day.profile.dietaryPreferences, isMinor: day.isMinor },
-      prefs: { favorites: prefs.favoriteRecipes, rejected: prefs.rejectedRecipes, pantry: prefs.pantry, budgetTier: prefs.budgetTier },
+      prefs: { favorites: favIds, rejected: prefs.rejectedRecipes, pantry: prefs.pantry, budgetTier: prefs.budgetTier },
       recentRecipeIds: prefs.recentRecipeIds,
       mealTypeOverride: mealOverride,
+      fasting: fasting.fastingToday,
+      extraRecipes,
+      favoriteIngredients: lib.favIngredients,
+      likedRecipeIds: lib.myRatings.filter((r) => r.stars >= 4).map((r) => engineId(r.ref)),
+      favoritesFirst: prefs.favoritesFirst,
     };
-  }, [day.goals, day.profile, day.remaining, day.foodLogs, day.isMinor, prefs, mealOverride]);
+  }, [day.goals, day.profile, day.remaining, day.foodLogs, day.isMinor, prefs, mealOverride, fasting.fastingToday, extraRecipes, favIds, lib.favIngredients, lib.myRatings]);
 
   useEffect(() => {
     if (!input) return;
@@ -80,8 +94,15 @@ export default function NextMeal() {
     bump();
   };
 
-  const toggleFav = (id: string) =>
-    savePrefs({ favoriteRecipes: prefs.favoriteRecipes.includes(id) ? prefs.favoriteRecipes.filter((x) => x !== id) : [...prefs.favoriteRecipes, id] });
+  const toggleFav = async (id: string) => {
+    if (!viewingMember) return;
+    const ref = extraRecipes.some((r) => r.id === id) ? id : BUILTIN_PREFIX + id;
+    if (favIds.includes(id)) {
+      await backend.removeFavoriteRecipe(viewingMember.id, ref);
+      if (prefs.favoriteRecipes.includes(id)) await savePrefs({ favoriteRecipes: prefs.favoriteRecipes.filter((x) => x !== id) });
+    } else await backend.saveFavoriteRecipe(viewingMember.id, { ref, folders: [], note: '' });
+    bump();
+  };
   const reject = async (idx: number) => {
     const id = cards[idx].recipe.id;
     await savePrefs({ rejectedRecipes: [...prefs.rejectedRecipes, id] });
@@ -103,7 +124,7 @@ export default function NextMeal() {
         ) : (
           <>
             <Row gap={8} wrap>
-              {(['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).map((m) => (
+              {((fasting.fastingToday ? ['iftar', 'snack', 'suhoor'] : ['breakfast', 'lunch', 'dinner', 'snack']) as MealType[]).map((m) => (
                 <Chip key={m} label={t(`meal.${m}` as StringKey)} selected={result.mealType === m} onPress={() => setMealOverride(m)} />
               ))}
             </Row>
@@ -123,6 +144,7 @@ export default function NextMeal() {
               </Row>
             </LinearGradient>
 
+            {fasting.fastingToday && <Banner tone="ai" icon="moon-outline" text={`${t('nm.fastingBanner')}${result.mealType === 'suhoor' ? '\n' + t('nm.fastingTip.suhoor') : result.mealType === 'iftar' ? '\n' + t('nm.fastingTip.iftar') : ''}`} />}
             {result.mode !== 'normal' && <Banner tone="ai" text={t(result.mode === 'light' ? 'nm.mode.light' : 'nm.mode.goal_reached')} />}
             {cards.length === 0 && <Banner tone="warning" text={t('nm.empty')} />}
 
@@ -130,7 +152,7 @@ export default function NextMeal() {
               <MealCard
                 key={`${s.kind}-${s.recipe.id}`}
                 s={s}
-                fav={prefs.favoriteRecipes.includes(s.recipe.id)}
+                fav={favIds.includes(s.recipe.id)}
                 onFav={() => toggleFav(s.recipe.id)}
                 onAdd={() => addMeal(s)}
                 onAnother={() => replaceCard(idx)}

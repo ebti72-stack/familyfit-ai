@@ -11,6 +11,9 @@ if (process.env.EXPO_PUBLIC_AUTH_PHONE === 'true') caps.push('phone');
 if (process.env.EXPO_PUBLIC_AUTH_APPLE === 'true') caps.push('apple');
 if (process.env.EXPO_PUBLIC_AUTH_GOOGLE === 'true') caps.push('google');
 
-export const backend: Backend = url && anon ? new SupabaseBackend(url, anon, caps) : new LocalBackend();
+/** Recipe analysis/translation Edge Functions (need ANTHROPIC_API_KEY in Supabase function secrets). */
+const ai = process.env.EXPO_PUBLIC_AI_FUNCTIONS === 'true';
+
+export const backend: Backend = url && anon ? new SupabaseBackend(url, anon, caps, ai) : new LocalBackend();
 export const isLocal = backend.mode === 'local';
 export * from './types';

@@ -5,6 +5,7 @@ import { backend, isLocal } from '../backend';
 import { Banner, Button, Card, Icon, IconButton, Row, Screen, Segmented, Sheet, Txt, type IconName } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useApp } from '../state/app';
+import { FastingCard } from '../components/FastingCard';
 
 export default function Settings() {
   const { t, lang, setLang } = useI18n();
@@ -35,8 +36,13 @@ export default function Settings() {
         </View>
       </Card>
 
+      <FastingCard variant="profile" />
+
       <Card>
         <View>
+          <Item icon="moon-outline" label={t('fast.profileEntry')} onPress={() => router.push('/fasting')} />
+          <Item icon="book-outline" label={t('rec.library')} onPress={() => router.push('/recipes')} />
+          <Item icon="heart-circle-outline" label={t('rec.prefsTitle')} onPress={() => router.push('/recipes/preferences')} />
           <Item icon="person-circle-outline" label={t('settings.profile')} onPress={() => router.push({ pathname: '/onboarding/profile', params: { edit: '1' } })} />
           <Item icon="speedometer-outline" label={t('settings.goals')} onPress={() => router.push({ pathname: '/goals', params: { memberId: me?.id } })} />
         </View>
