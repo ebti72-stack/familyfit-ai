@@ -1,25 +1,54 @@
 {
   "expo": {
-    "name": "familyfit-ai",
+    "name": "FamilyFit AI",
     "slug": "familyfit-ai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.familyfit.app",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "FamilyFit AI uses the camera to scan food barcodes.",
+        "NSPhotoLibraryUsageDescription": "FamilyFit AI lets you pick a food photo to analyse."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#123D32",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "ai.familyfit.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser",
+      "expo-apple-authentication",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FamilyFit AI يستخدم الكاميرا لمسح باركود المنتجات الغذائية.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-image"
+    ],
+    "scheme": "familyfit",
+    "extra": {
+      "supportsRTL": true
     }
   }
 }
