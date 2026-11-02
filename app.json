@@ -8,7 +8,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ai.familyfit.app",
+      "bundleIdentifier": "com.ebti72.familyfit",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "FamilyFit AI uses the camera to scan food barcodes.",
