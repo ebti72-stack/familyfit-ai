@@ -235,7 +235,7 @@ export default function RecipeDetail() {
 
         {r.sourceUrl && <Button small kind="ghost" icon="open-outline" title={t('rd.openSource')} onPress={() => Linking.openURL(r.sourceUrl!).catch(() => undefined)} />}
 
-        {isOwner && (
+        {isOwner && membership?.family.kind !== 'personal' && (
           <Card>
             <View style={{ gap: 6 }}>
               <Row justify="space-between">

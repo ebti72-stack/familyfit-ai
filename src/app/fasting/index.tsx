@@ -195,12 +195,12 @@ export default function FastingHome() {
             </Card>
 
             {/* Family challenge: totals only, no ranking */}
-            <Card tone="alt">
+            {membership?.family.kind !== 'personal' && <Card tone="alt">
               <View style={{ gap: 6 }}>
                 <Row gap={8}><Icon name="people-outline" size={18} color={th.primary} /><Txt v="h3">{t('fast.familyTitle')}</Txt></Row>
                 {family ? <Txt v="caption" muted>{t('fast.familyBody', { n: family.completedDays, p: family.participants })}</Txt> : <Txt v="caption" muted>{t('fast.familyJoin')}</Txt>}
               </View>
-            </Card>
+            </Card>}
 
             <Row gap={10}>
               <View style={{ flex: 1 }}><Button kind="secondary" icon="ribbon-outline" title={t('fast.achievements')} onPress={() => router.push('/fasting/achievements')} /></View>

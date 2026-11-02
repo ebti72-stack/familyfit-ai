@@ -12,6 +12,7 @@ import { Platform } from 'react-native';
 import type { Product } from '../lib/openFoodFacts';
 import type {
   ActivityLog, DailyGoals, Family, FoodLog, Habit, HealthProfile, HydrationLog, Member, MemberRole, PointsConfig, PointsEntry,
+  GroupKind,
 } from '../lib/types';
 import {
   BackendError, DEFAULT_PREFS, type AnalyzeInput, type AnalyzeResult, type AuthCapability, type Backend, type FavoriteRecipe, type Membership, type NewFoodLog,
@@ -26,7 +27,7 @@ const toMember = (r: any): Member => ({
   id: r.id, familyId: r.family_id, userId: r.user_id, displayName: r.display_name, avatarEmoji: r.avatar_emoji,
   role: r.role, managedBy: r.managed_by, shareHealthWithAdmin: r.share_health_with_admin,
 });
-const toFamily = (r: any): Family => ({ id: r.id, name: r.name, inviteCode: r.invite_code, pointsConfig: r.points_config });
+const toFamily = (r: any): Family => ({ id: r.id, name: r.name, kind: r.kind ?? 'family', inviteCode: r.invite_code, pointsConfig: r.points_config });
 const toNutrients = (r: any) => ({
   kcal: +r.kcal, protein: +r.protein_g, carbs: +r.carbs_g, fat: +r.fat_g, fiber: +r.fiber_g, sugar: +r.sugar_g, satFat: +r.sat_fat_g, sodium: +r.sodium_mg,
 });
@@ -134,10 +135,17 @@ export class SupabaseBackend implements Backend {
     const rows = check(await this.sb.from('family_members').select('*, families(*)').eq('user_id', uid)) as any[];
     return rows.map((r) => ({ member: toMember(r), family: toFamily(r.families) }));
   }
-  async createFamily(name: string, myName: string, emoji: string | null) {
-    const m = check(await this.sb.rpc('create_family', { family_name: name, my_name: myName, my_emoji: emoji })) as any;
+  async createFamily(name: string, myName: string, emoji: string | null, kind: GroupKind = 'family') {
+    const m = check(await this.sb.rpc('create_family', { family_name: name, my_name: myName, my_emoji: emoji, group_kind: kind })) as any;
     const f = check(await this.sb.from('families').select('*').eq('id', m.family_id).single());
     return { member: toMember(m), family: toFamily(f) };
+  }
+  async updateGroup(familyId: string, patch: { name?: string; kind?: GroupKind }) {
+    const row: any = {};
+    if (patch.name) row.name = patch.name;
+    if (patch.kind) row.kind = patch.kind;
+    const { error } = await this.sb.from('families').update(row).eq('id', familyId);
+    if (error) throw new BackendError(error.code === '42501' ? 'forbidden' : 'unknown', error.message);
   }
   async joinFamily(code: string, myName: string, role: MemberRole, emoji: string | null) {
     const m = check(await this.sb.rpc('join_family', { code, my_name: myName, my_role: role, my_emoji: emoji })) as any;

@@ -171,11 +171,11 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* Family */}
-        <Card onPress={() => router.push('/(tabs)/family')}>
+        {/* Group (hidden in personal use: no ranking for a single person) */}
+        {membership?.family.kind !== 'personal' && <Card onPress={() => router.push('/(tabs)/family')}>
           <View style={{ gap: 12 }}>
             <Row justify="space-between">
-              <Txt v="h3">{t('home.family')}</Txt>
+              <Txt v="h3">{membership?.family.kind === 'friends' ? t('home.friends') : t('home.family')}</Txt>
               <Row gap={6}>
                 <Icon name="trophy" size={16} color={th.gold} />
                 <Txt v="label" muted>{myRank ? `${t('home.rank')} #${myRank} · ${n(myRow?.points ?? 0)} ${t('home.points')}` : ''}</Txt>
@@ -191,7 +191,7 @@ export default function Dashboard() {
               ))}
             </Row>
           </View>
-        </Card>
+        </Card>}
       </Screen>
       <Toast text={toast.msg ?? ''} visible={!!toast.msg} />
     </View>

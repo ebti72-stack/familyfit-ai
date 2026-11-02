@@ -18,7 +18,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function FastingSettings() {
   const { t, n, lang } = useI18n();
-  const { viewingMember, bump, theme: th } = useApp();
+  const { viewingMember, membership, bump, theme: th } = useApp();
   const f = useFasting(viewingMember?.id);
   const [p, setP] = useState<FastingProfile | null>(null);
   const [busy, setBusy] = useState(false);
@@ -129,7 +129,7 @@ export default function FastingSettings() {
         </View>
       </Card>
 
-      <Card>
+      {membership?.family.kind !== 'personal' && <Card>
         <View style={{ gap: 6 }}>
           <Row justify="space-between">
             <Txt v="h3" style={{ flex: 1 }}>{t('fast.joinFamily')}</Txt>
@@ -137,7 +137,7 @@ export default function FastingSettings() {
           </Row>
           <Txt v="caption" muted>{t('fast.joinFamilyHint')}</Txt>
         </View>
-      </Card>
+      </Card>}
 
       <Card>
         <View style={{ gap: 10 }}>

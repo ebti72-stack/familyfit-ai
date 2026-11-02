@@ -4,8 +4,7 @@ import type { Product } from '../lib/openFoodFacts';
 import type { DocLang, UserRecipe } from '../lib/recipe';
 import type { RecipeTranslation } from '../lib/recipeDoc';
 import type {
-  ActivityLog, DailyGoals, Family, FoodLog, Habit, HealthProfile, HydrationLog, Member, MemberRole, PointsConfig, PointsEntry,
-} from '../lib/types';
+  ActivityLog, DailyGoals, Family, FoodLog, Habit, HealthProfile, HydrationLog, Member, MemberRole, PointsConfig, PointsEntry, GroupKind } from '../lib/types';
 
 export interface Session {
   userId: string;
@@ -113,7 +112,9 @@ export interface Backend {
   deleteMyData(): Promise<void>;
 
   myMemberships(): Promise<Membership[]>;
-  createFamily(name: string, myName: string, emoji: string | null): Promise<Membership>;
+  createFamily(name: string, myName: string, emoji: string | null, kind?: GroupKind): Promise<Membership>;
+  /** Admin only: rename, or turn a personal space into a family/friends group (and back). */
+  updateGroup(familyId: string, patch: { name?: string; kind?: GroupKind }): Promise<void>;
   joinFamily(code: string, myName: string, role: MemberRole, emoji: string | null): Promise<Membership>;
   listMembers(familyId: string): Promise<Member[]>;
   addManagedMember(familyId: string, name: string, role: MemberRole, emoji: string | null): Promise<Member>;

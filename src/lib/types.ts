@@ -56,9 +56,13 @@ export interface DailyGoals {
   notes: string[]; // i18n keys explaining caveats
 }
 
+/** How the app is used: alone, or in a group with family or friends. */
+export type GroupKind = 'personal' | 'family' | 'friends';
+
 export interface Family {
   id: string;
   name: string;
+  kind: GroupKind;
   inviteCode: string;
   pointsConfig: PointsConfig;
 }

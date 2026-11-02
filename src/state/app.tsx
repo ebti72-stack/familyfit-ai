@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
 import { backend, DEFAULT_PREFS, type Membership, type Session, type UserPrefs } from '../backend';
 import { dark, light, type Theme } from '../theme';
@@ -8,6 +9,10 @@ interface AppCtx {
   booting: boolean;
   session: Session | null;
   membership: Membership | null;
+  /** Every space the user belongs to (personal, family, friends). */
+  memberships: Membership[];
+  /** Switch the active space; remembered on this device. */
+  switchGroup: (familyId: string) => Promise<void>;
   members: Member[];
   /** The member whose data is shown (self, or a supervised child selected by the admin). */
   viewingMember: Member | null;
@@ -23,12 +28,16 @@ interface AppCtx {
 }
 
 const Ctx = createContext<AppCtx | null>(null);
+const ACTIVE_KEY = 'familyfit.activeGroup';
+const readActive = async () => { try { return await AsyncStorage.getItem(ACTIVE_KEY); } catch { return null; } };
+const writeActive = async (id: string) => { try { await AsyncStorage.setItem(ACTIVE_KEY, id); } catch { /* per-device convenience only */ } };
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const scheme = useColorScheme();
   const [booting, setBooting] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [viewingId, setViewingMemberId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<UserPrefs>(DEFAULT_PREFS);
@@ -39,14 +48,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSession(s);
     if (!s) {
       setMembership(null);
+      setMemberships([]);
       setMembers([]);
       setPrefs(DEFAULT_PREFS);
       return;
     }
     try {
-      const [ms, p] = await Promise.all([backend.myMemberships(), backend.getPrefs()]);
+      const [ms, p, active] = await Promise.all([backend.myMemberships(), backend.getPrefs(), readActive()]);
       setPrefs(p);
-      const m = ms[0] ?? null;
+      setMemberships(ms);
+      const m = ms.find((x) => x.family.id === active) ?? ms[0] ?? null;
       setMembership(m);
       setMembers(m ? await backend.listMembers(m.family.id) : []);
     } catch {
@@ -73,6 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!membership) return;
     const [ms, list] = await Promise.all([backend.myMemberships(), backend.listMembers(membership.family.id)]);
     const m = ms.find((x) => x.family.id === membership.family.id) ?? ms[0] ?? null;
+    setMemberships(ms);
     setMembership(m);
     setMembers(list);
     bump();
@@ -90,10 +102,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setMembershipAndLoad = useCallback(
     (m: Membership | null) => {
       setMembership(m);
-      if (m) backend.listMembers(m.family.id).then(setMembers).catch(() => undefined);
+      setViewingMemberId(null);
+      if (m) {
+        writeActive(m.family.id);
+        backend.listMembers(m.family.id).then(setMembers).catch(() => undefined);
+        backend.myMemberships().then(setMemberships).catch(() => undefined);
+      }
       bump();
     },
     [bump],
+  );
+
+  const switchGroup = useCallback(
+    async (familyId: string) => {
+      const ms = await backend.myMemberships();
+      const m = ms.find((x) => x.family.id === familyId);
+      if (!m) return;
+      setMemberships(ms);
+      setMembershipAndLoad(m);
+    },
+    [setMembershipAndLoad],
   );
 
   const theme = prefs.theme === 'dark' || (prefs.theme === 'system' && scheme === 'dark') ? dark : light;
@@ -101,10 +129,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppCtx>(
     () => ({
-      booting, session, membership, members, viewingMember, setViewingMemberId, prefs, savePrefs, theme, version, bump, refreshFamily,
+      booting, session, membership, memberships, switchGroup, members, viewingMember, setViewingMemberId, prefs, savePrefs, theme, version, bump, refreshFamily,
       setMembership: setMembershipAndLoad,
     }),
-    [booting, session, membership, members, viewingMember, prefs, savePrefs, theme, version, bump, refreshFamily, setMembershipAndLoad],
+    [booting, session, membership, memberships, switchGroup, members, viewingMember, prefs, savePrefs, theme, version, bump, refreshFamily, setMembershipAndLoad],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -8,7 +8,8 @@ import { Avatar, Banner, Button, Card, Chip, Field, Icon, IconButton, Pill, Row,
 import { useI18n, type StringKey } from '../../i18n';
 import { localDate, periodRange, type Period } from '../../lib/dates';
 import { badgesFor, buildLeaderboard, ranks } from '../../lib/points';
-import type { LeaderboardRow, MemberRole, PointsConfig, PointsEntry } from '../../lib/types';
+import type { GroupKind, LeaderboardRow, MemberRole, PointsConfig, PointsEntry } from '../../lib/types';
+import { BackendError } from '../../backend';
 import { useApp } from '../../state/app';
 import { brand, cardShadow, radius } from '../../theme';
 
@@ -20,7 +21,7 @@ const MEDALS = [
 
 export default function Family() {
   const { t, n } = useI18n();
-  const { membership, members, setViewingMemberId, refreshFamily, version, theme: th } = useApp();
+  const { membership, memberships, switchGroup, members, setViewingMemberId, refreshFamily, version, theme: th } = useApp();
   const [period, setPeriod] = useState<Period>('week');
   const [points, setPoints] = useState<PointsEntry[] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -41,9 +42,49 @@ export default function Family() {
   const rk = board ? ranks(board) : [];
 
   if (!membership) return null;
+  const kind = membership.family.kind;
+  const switcher = memberships.length > 1 ? (
+    <View style={{ gap: 6 }}>
+      <Txt v="label" muted>{t('group.spaces')}</Txt>
+      <Row gap={8} wrap>
+        {memberships.map((m) => (
+          <Chip key={m.family.id} selected={m.family.id === membership.family.id} onPress={() => switchGroup(m.family.id)}
+            label={m.family.kind === 'personal' ? `${t('group.personalLabel')}` : m.family.name} />
+        ))}
+      </Row>
+    </View>
+  ) : null;
+
+  if (kind === 'personal') {
+    const mine = board?.find((r) => r.memberId === membership.member.id);
+    return (
+      <Screen header={<Row style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6 }}><Txt v="h1">{t('me.title')}</Txt></Row>}>
+        <Txt muted>{t('me.body')}</Txt>
+        {switcher}
+        <Segmented value={period} onChange={setPeriod} options={(['day', 'week', 'month', 'all'] as Period[]).map((p) => ({ value: p, label: t(`fam.period.${p}` as StringKey) }))} />
+        {!board ? <Skeleton height={90} r={24} /> : mine && (
+          <LeaderRow r={mine} rank={0} allTimePoints={allTime.find((x) => x.memberId === mine.memberId)?.points ?? 0} isMe />
+        )}
+        <StartGroupCard familyId={membership.family.id} onDone={refreshFamily} />
+        <JoinGroupCard myName={membership.member.displayName} emoji={membership.member.avatarEmoji} />
+        <Card tone="alt" onPress={() => setRulesOpen(true)}>
+          <Row gap={12}>
+            <Icon name="ribbon-outline" size={22} color={th.dark ? th.gold : brand.forest} />
+            <View style={{ flex: 1 }}>
+              <Txt v="h3">{t('fam.pointsRules')}</Txt>
+              <Txt v="caption" muted>{t('fam.pointsRulesBody')}</Txt>
+            </View>
+            <Icon name="chevron-forward" size={18} color={th.textMuted} flipRtl />
+          </Row>
+        </Card>
+        <RulesSheet visible={rulesOpen} onClose={() => setRulesOpen(false)} cfg={membership.family.pointsConfig} editable={isAdmin} familyId={membership.family.id} onSaved={refreshFamily} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen header={<Row style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6 }}><Txt v="h1">{membership.family.name}</Txt></Row>}>
+      {switcher}
       <Segmented value={period} onChange={setPeriod} options={(['day', 'week', 'month', 'all'] as Period[]).map((p) => ({ value: p, label: t(`fam.period.${p}` as StringKey) }))} />
 
       {!board ? <Skeleton height={260} r={24} /> : (
@@ -83,8 +124,8 @@ export default function Family() {
 
       <Card>
         <View style={{ gap: 12 }}>
-          <Txt v="h3">{t('fam.invite')}</Txt>
-          <Txt v="caption" muted>{t('fam.inviteBody')}</Txt>
+          <Txt v="h3">{kind === 'friends' ? t('group.inviteTitle') : t('fam.invite')}</Txt>
+          <Txt v="caption" muted>{kind === 'friends' ? t('group.inviteBody') : t('fam.inviteBody')}</Txt>
           <Row justify="space-between" style={{ backgroundColor: th.surfaceAlt, borderRadius: radius.md, padding: 14 }}>
             <Txt v="h2" style={{ letterSpacing: 4 }}>{membership.family.inviteCode}</Txt>
             <IconButton icon="share-outline" label={t('fam.share')} onPress={() => Share.share({ message: `FamilyFit AI · ${membership.family.name}: ${membership.family.inviteCode}` })} />
@@ -95,7 +136,7 @@ export default function Family() {
       <View style={{ gap: 8 }}>
         <Row justify="space-between">
           <Txt v="h2">{t('fam.members')}</Txt>
-          {isAdmin && <Button small full={false} kind="secondary" icon="person-add-outline" title={t('fam.addChild')} onPress={() => setAddOpen(true)} />}
+          {isAdmin && kind === 'family' && <Button small full={false} kind="secondary" icon="person-add-outline" title={t('fam.addChild')} onPress={() => setAddOpen(true)} />}
         </Row>
         {members.map((m) => {
           const supervised = m.userId === null && isAdmin;
@@ -147,6 +188,77 @@ export default function Family() {
   );
 }
 
+function StartGroupCard({ familyId, onDone }: { familyId: string; onDone: () => Promise<void> }) {
+  const { t } = useI18n();
+  const [kind, setKind] = useState<Exclude<GroupKind, 'personal'>>('family');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const th = useApp().theme;
+  const start = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await backend.updateGroup(familyId, { kind, name: name.trim() });
+      await onDone();
+    } catch {
+      setError(t('common.error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <View style={{ gap: 12 }}>
+        <Txt v="h3">{t('me.startGroup')}</Txt>
+        <Txt v="caption" muted>{t('me.startGroupBody')}</Txt>
+        <Row gap={8}>
+          {(['family', 'friends'] as const).map((k) => <Chip key={k} label={t(`group.kind.${k}` as StringKey)} selected={kind === k} onPress={() => setKind(k)} />)}
+        </Row>
+        {kind === 'friends' && <Txt v="caption" muted>{t('group.friendsNote')}</Txt>}
+        <Field label={t('group.name')} value={name} onChangeText={setName} placeholder={t(`group.namePh.${kind}` as StringKey)} />
+        {error && <Txt v="caption" color={th.danger}>{error}</Txt>}
+        <Button title={t('group.create')} icon="people-outline" loading={busy} disabled={!name.trim()} onPress={start} />
+      </View>
+    </Card>
+  );
+}
+
+function JoinGroupCard({ myName, emoji }: { myName: string; emoji: string | null }) {
+  const { t } = useI18n();
+  const { setMembership, theme: th } = useApp();
+  const [code, setCode] = useState('');
+  const [role, setRole] = useState<MemberRole>('adult');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const join = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const m = await backend.joinFamily(code.trim(), myName, role, emoji);
+      setMembership(m);
+      setCode('');
+      router.push({ pathname: '/onboarding/profile', params: { memberId: m.member.id, edit: '1' } });
+    } catch (e) {
+      setError(e instanceof BackendError && e.code === 'invalid_code' ? t('family.invalidCode') : t('common.error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <View style={{ gap: 12 }}>
+        <Txt v="h3">{t('me.joinGroup')}</Txt>
+        <Txt v="caption" muted>{t('me.joinBody')}</Txt>
+        <Field label={t('family.code')} value={code} onChangeText={(v) => setCode(v.toUpperCase())} autoCapitalize="characters" placeholder="AB12CD34" />
+        <Row gap={8}>{(['adult', 'teen'] as MemberRole[]).map((r) => <Chip key={r} label={t(`role.${r}` as StringKey)} selected={role === r} onPress={() => setRole(r)} />)}</Row>
+        {error && <Txt v="caption" color={th.danger}>{error}</Txt>}
+        <Button kind="secondary" title={t('family.join')} loading={busy} disabled={code.trim().length < 6} onPress={join} />
+      </View>
+    </Card>
+  );
+}
+
 const shortName = (s: string) => s.replace(/\s*\(.*\)$/, '');
 
 function LeaderRow({ r, rank, allTimePoints, isMe }: { r: LeaderboardRow; rank: number; allTimePoints: number; isMe: boolean }) {
@@ -156,7 +268,7 @@ function LeaderRow({ r, rank, allTimePoints, isMe }: { r: LeaderboardRow; rank: 
   return (
     <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.lg, backgroundColor: isMe ? th.surfaceAlt : th.surface, borderWidth: 1, borderColor: isMe ? th.primary + '55' : th.border }]}>
       <View style={{ width: 30, alignItems: 'center' }}>
-        <Txt v="h3" color={rank <= 3 && r.points > 0 ? th.gold : th.textMuted} center>{rank}</Txt>
+        {rank > 0 ? <Txt v="h3" color={rank <= 3 && r.points > 0 ? th.gold : th.textMuted} center>{rank}</Txt> : <Icon name="ribbon-outline" size={20} color={th.primary} />}
       </View>
       <Avatar emoji={r.avatarEmoji} name={r.displayName} size={42} />
       <View style={{ flex: 1, gap: 3 }}>

@@ -13,7 +13,8 @@ type Tab = 'favorites' | 'mine' | 'family' | 'builtin';
 
 export default function Library() {
   const { t, lang, rtl } = useI18n();
-  const th = useApp().theme;
+  const { theme: th, membership } = useApp();
+  const kind = membership?.family.kind ?? 'family';
   const lib = useRecipeLibrary();
   const [tab, setTab] = useState<Tab>('favorites');
   const [folder, setFolder] = useState<string | null>(null);
@@ -58,7 +59,9 @@ export default function Library() {
       </Row>
 
       <Segmented value={tab} onChange={(v) => { setTab(v); setFolder(null); }} options={[
-        { value: 'favorites', label: t('rec.tab.favorites') }, { value: 'mine', label: t('rec.tab.mine') }, { value: 'family', label: t('rec.tab.family') }, { value: 'builtin', label: 'FamilyFit' },
+        { value: 'favorites', label: t('rec.tab.favorites') }, { value: 'mine', label: t('rec.tab.mine') },
+        ...(kind === 'personal' ? [] : [{ value: 'family' as Tab, label: kind === 'friends' ? t('rec.tab.friends') : t('rec.tab.family') }]),
+        { value: 'builtin', label: 'FamilyFit' },
       ]} />
 
       <Row gap={8} style={{ backgroundColor: th.surface, borderRadius: radius.pill, paddingHorizontal: 14, height: 44, borderWidth: 1, borderColor: th.border }}>

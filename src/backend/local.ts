@@ -12,6 +12,7 @@ import { uid } from '../lib/dates';
 import type { Product } from '../lib/openFoodFacts';
 import type {
   ActivityLog, DailyGoals, Family, FoodLog, Habit, HealthProfile, HydrationLog, Member, MemberRole, PointsConfig, PointsEntry,
+  GroupKind,
 } from '../lib/types';
 import { BackendError, DEFAULT_PREFS, type AnalyzeResult, type Backend, type FavoriteRecipe, type Membership, type NewFoodLog, type RecipeRating, type Session, type UserPrefs } from './types';
 import { canConfirmCompletion, makeLog, newBadges, type FastingAchievement, type FastingLog, type FastingProfile, type FastingStatus } from '../lib/fasting';
@@ -71,6 +72,8 @@ export class LocalBackend implements Backend {
     try {
       const raw = await AsyncStorage.getItem(KEY);
       this.db = raw ? { ...empty(), ...JSON.parse(raw) } : empty();
+      // Data saved before groups had a kind were family groups.
+      this.db!.families.forEach((f) => { f.kind = f.kind ?? 'family'; });
     } catch {
       this.db = empty();
     }
@@ -192,10 +195,10 @@ export class LocalBackend implements Backend {
       .map((m) => ({ member: m, family: db.families.find((f) => f.id === m.familyId)! }))
       .filter((x) => x.family);
   }
-  async createFamily(name: string, myName: string, emoji: string | null): Promise<Membership> {
+  async createFamily(name: string, myName: string, emoji: string | null, kind: GroupKind = 'family'): Promise<Membership> {
     const db = await this.load();
     const u = await this.me();
-    const family: Family = { id: uid(), name, inviteCode: inviteCode(), pointsConfig: { ...DEFAULT_POINTS } };
+    const family: Family = { id: uid(), name, kind, inviteCode: inviteCode(), pointsConfig: { ...DEFAULT_POINTS } };
     const member: Member = { id: uid(), familyId: family.id, userId: u.id, displayName: myName, avatarEmoji: emoji, role: 'admin', managedBy: null, shareHealthWithAdmin: false };
     db.families.push(family);
     db.members.push(member);
@@ -205,7 +208,7 @@ export class LocalBackend implements Backend {
   async joinFamily(code: string, myName: string, role: MemberRole, emoji: string | null): Promise<Membership> {
     const db = await this.load();
     const u = await this.me();
-    const family = db.families.find((f) => f.inviteCode === code.trim().toUpperCase());
+    const family = db.families.find((f) => f.inviteCode === code.trim().toUpperCase() && f.kind !== 'personal');
     if (!family) throw new BackendError('invalid_code');
     let member = db.members.find((m) => m.familyId === family.id && m.userId === u.id);
     if (!member) {
@@ -214,6 +217,16 @@ export class LocalBackend implements Backend {
       await this.save();
     }
     return { family, member };
+  }
+  async updateGroup(familyId: string, patch: { name?: string; kind?: GroupKind }) {
+    const db = await this.load();
+    const u = await this.me();
+    if (!db.members.some((m) => m.familyId === familyId && m.userId === u.id && m.role === 'admin')) throw new BackendError('forbidden');
+    const f = db.families.find((x) => x.id === familyId)!;
+    if (patch.kind && patch.kind !== 'family' && db.members.some((m) => m.familyId === familyId && m.userId === null)) throw new BackendError('forbidden', 'supervised members');
+    if (patch.name) f.name = patch.name;
+    if (patch.kind) f.kind = patch.kind;
+    await this.save();
   }
   async listMembers(familyId: string): Promise<Member[]> {
     const db = await this.load();

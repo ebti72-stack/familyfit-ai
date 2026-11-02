@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { haptic, Icon, Txt, type IconName } from '../../components/ui';
 import { useI18n, type StringKey } from '../../i18n';
-import { useTheme } from '../../state/app';
+import { useApp } from '../../state/app';
 import { brand, cardShadow, radius } from '../../theme';
 
 const ITEMS: Record<string, { icon: IconName; active: IconName; label: StringKey }> = {
@@ -16,8 +16,9 @@ const ITEMS: Record<string, { icon: IconName; active: IconName; label: StringKey
 };
 
 function TabBar({ state, navigation }: any) {
-  const t = useTheme();
+  const { theme: t, membership } = useApp();
   const { t: tr } = useI18n();
+  const kind = membership?.family.kind ?? 'family';
   const insets = useSafeAreaInsets();
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: Math.max(insets.bottom, 12), paddingHorizontal: 16, alignItems: 'center' }}>
@@ -26,8 +27,12 @@ function TabBar({ state, navigation }: any) {
         width: '100%', maxWidth: 520, borderWidth: 1, borderColor: t.border,
       }, cardShadow(t, 2)]}>
         {state.routes.map((route: any, i: number) => {
-          const item = ITEMS[route.name];
-          if (!item) return null;
+          const base = ITEMS[route.name];
+          if (!base) return null;
+          // The group tab follows the space: "Me" for personal use, "Friends" or "Family" for groups.
+          const item = route.name !== 'family' ? base
+            : kind === 'personal' ? { icon: 'person-outline' as IconName, active: 'person' as IconName, label: 'tab.me' as StringKey }
+            : kind === 'friends' ? { ...base, label: 'tab.friends' as StringKey } : base;
           const focused = state.index === i;
           const onPress = () => {
             haptic();
@@ -60,7 +65,7 @@ function TabBar({ state, navigation }: any) {
 }
 
 export default function TabsLayout() {
-  const t = useTheme();
+  const t = useApp().theme;
   return (
     <Tabs tabBar={(props: any) => <TabBar {...props} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.bg } } as any}>
       <Tabs.Screen name="index" />
