@@ -135,7 +135,7 @@ export default function Family() {
 
       <View style={{ gap: 8 }}>
         <Row justify="space-between">
-          <Txt v="h2">{t('fam.members')}</Txt>
+          <Txt v="h2">{kind === 'friends' ? t('group.members') : t('fam.members')}</Txt>
           {isAdmin && kind === 'family' && <Button small full={false} kind="secondary" icon="person-add-outline" title={t('fam.addChild')} onPress={() => setAddOpen(true)} />}
         </Row>
         {members.map((m) => {

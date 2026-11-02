@@ -23,7 +23,7 @@ export function GoalsSummary({ goals }: { goals: DailyGoals }) {
             <Txt v="caption" color="rgba(255,255,255,0.7)" center>{t('common.kcal')}</Txt>
           </Ring>
           <View style={{ flex: 1, gap: 6 }}>
-            <Row gap={6}><Icon name="calculator-outline" size={16} color={th.gold} /><Txt v="label" color="#fff">{t(`goals.method.${goals.isCustom ? 'custom' : goals.method}` as StringKey)}</Txt></Row>
+            <Row gap={6} align="flex-start"><Icon name="calculator-outline" size={16} color={th.gold} /><Txt v="label" color="#fff" style={{ flex: 1 }}>{t(`goals.method.${goals.isCustom ? 'custom' : goals.method}` as StringKey)}</Txt></Row>
             <Txt v="caption" color="rgba(255,255,255,0.75)">{t('goals.water')}: {n(goals.waterMl)} {t('common.ml')} · {t('goals.steps')}: {n(goals.steps)}</Txt>
           </View>
         </Row>

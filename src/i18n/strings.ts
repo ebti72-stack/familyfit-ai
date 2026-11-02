@@ -73,7 +73,7 @@ export const ar = {
   'family.demoHint': 'تُنشئ أفراداً ونقاطاً تجريبية مميزة بكلمة (تجريبي) لاستكشاف التطبيق.',
   'family.avatar': 'رمزك',
 
-  'role.admin': 'مدير العائلة',
+  'role.admin': 'المدير',
   'role.adult': 'بالغ',
   'role.teen': 'مراهق',
   'role.child': 'طفل',
@@ -357,7 +357,7 @@ export const ar = {
   'fam.points.sleep_routine': 'الالتزام بروتين النوم',
   'fam.points.weekly_challenge': 'إكمال تحدٍ أسبوعي',
   'fam.challenges': 'التحديات والمكافآت',
-  'fam.challengesBody': 'التحديات العائلية ومتجر المكافآت ضمن المرحلة 7.',
+  'fam.challengesBody': 'التحديات الجماعية ومتجر المكافآت ضمن المرحلة 7.',
   'fam.you': 'أنت',
   'fam.managed': 'بإشرافك',
   'fam.viewAs': 'عرض بياناته',
@@ -801,6 +801,7 @@ export const ar = {
   'fast.dowS.5': 'جمعة',
   'fast.dowS.6': 'سبت',
   'family.demoNeedsName': 'اكتب اسمك في الأعلى أولاً لتجربة العائلة التجريبية.',
+  'group.members': 'الأعضاء',
 };
 
 export type StringKey = keyof typeof ar;
@@ -880,7 +881,7 @@ export const en: Record<StringKey, string> = {
   'family.demoHint': 'Creates sample members and points labelled “(demo)” so you can explore.',
   'family.avatar': 'Your avatar',
 
-  'role.admin': 'Family admin',
+  'role.admin': 'Admin',
   'role.adult': 'Adult',
   'role.teen': 'Teen',
   'role.child': 'Child',
@@ -1164,7 +1165,7 @@ export const en: Record<StringKey, string> = {
   'fam.points.sleep_routine': 'Kept sleep routine',
   'fam.points.weekly_challenge': 'Completed a weekly challenge',
   'fam.challenges': 'Challenges & rewards',
-  'fam.challengesBody': 'Family challenges and the rewards store are part of phase 7.',
+  'fam.challengesBody': 'Group challenges and the rewards store are part of phase 7.',
   'fam.you': 'You',
   'fam.managed': 'Supervised',
   'fam.viewAs': 'View their data',
@@ -1608,4 +1609,5 @@ export const en: Record<StringKey, string> = {
   'fast.dowS.5': 'Fr',
   'fast.dowS.6': 'Sa',
   'family.demoNeedsName': 'Type your name above first to try the demo family.',
+  'group.members': 'Members',
 };

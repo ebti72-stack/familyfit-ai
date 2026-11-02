@@ -56,7 +56,8 @@ export function Txt({
       minimumFontScale={minimumFontScale}
       style={[
         VARIANTS[v],
-        { color: color ?? (faint ? t.textFaint : muted ? t.textMuted : t.text), textAlign: center ? 'center' : rtl ? 'right' : 'left', writingDirection: rtl ? 'rtl' : 'ltr' },
+        // Alignment follows the UI language; the text's own direction is left to the bidi algorithm so English stays in order.
+        { color: color ?? (faint ? t.textFaint : muted ? t.textMuted : t.text), textAlign: center ? 'center' : rtl ? 'right' : 'left' },
         style,
       ]}
     >
@@ -85,6 +86,7 @@ export function Screen({ children, scroll = true, padded = true, header, footer,
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
     >
       {children}
     </ScrollView>
@@ -93,7 +95,8 @@ export function Screen({ children, scroll = true, padded = true, header, footer,
   );
   return (
     <SafeAreaView style={[{ flex: 1, backgroundColor: t.bg }, dirStyle(rtl)]} edges={['top']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Scrolling screens use automaticallyAdjustKeyboardInsets so the focused field scrolls into view. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' && !scroll ? 'padding' : undefined}>
         <View style={{ flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
           {header}
           {body}
@@ -225,6 +228,7 @@ export function Field({ label, hint, error, ...props }: TextInputProps & { label
       <TextInput
         placeholderTextColor={t.textFaint}
         returnKeyType={props.multiline ? undefined : 'done'}
+        selectTextOnFocus={props.keyboardType === 'number-pad' || props.keyboardType === 'decimal-pad' || props.keyboardType === 'numeric'}
         submitBehavior={props.multiline ? undefined : 'blurAndSubmit'}
         {...props}
         style={[{
