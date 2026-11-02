@@ -1,3 +1,4 @@
+import { File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -55,7 +56,8 @@ export default function RecipeDocument() {
     const html = docHtml(model);
     if (Platform.OS === 'web') return Print.printAsync({ html });
     const { uri } = await Print.printToFileAsync({ html });
-    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: model.title });
+    const named = await namedPdf(uri, model.title);
+    if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(named, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: model.title });
     else toast.show(t('doc.shareUnavailable'));
   });
   const print = () => run('print', async () => { await Print.printAsync({ html: docHtml(model) }); });
@@ -168,4 +170,17 @@ export default function RecipeDocument() {
       <Toast text={toast.msg ?? ''} visible={!!toast.msg} />
     </View>
   );
+}
+
+/** Give the printed PDF the recipe's name instead of a random id (falls back to the original file). */
+async function namedPdf(uri: string, title: string): Promise<string> {
+  try {
+    const safe = title.replace(/[\\/:*?"<>|\n\r]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'FamilyFit recipe';
+    const dest = new File(Paths.cache, `${safe}.pdf`);
+    if (dest.exists) dest.delete();
+    await new File(uri).move(dest);
+    return dest.uri;
+  } catch {
+    return uri;
+  }
 }

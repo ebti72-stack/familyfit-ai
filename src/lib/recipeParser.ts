@@ -143,7 +143,9 @@ export function parseIngredientLine(raw: string): RecipeIngredientLine {
     unit = unit ?? 'piece';
   }
 
-  const foodId = matchFood(rest) ?? matchFood(n);
+  let foodId = matchFood(rest) ?? matchFood(n);
+  // "1 tbsp olive" / "ملعقة زيتون": a spoon or volume of "olive" is olive oil (whole olives are not measured in spoons/ml).
+  if (!foodId && unit && ['tbsp', 'tsp', 'ml', 'l', 'cup'].includes(unit) && /(^|\s)(olive|زيتون)(\s|$)/.test(rest.trim())) foodId = 'olive_oil';
   const toTaste = qty == null && TO_TASTE.test(n);
   // "بصلة متوسطة" / "1 large onion" style: a single countable item → 1 piece, flagged as an assumption to confirm.
   let assumedOne = false;
@@ -206,6 +208,8 @@ export function parseRecipeText(text: string): ParsedRecipe {
 
     const sv = n.match(/(?:يكفي|تكفي|لعدد|عدد الحصص|الحصص|serves|servings|yield|makes)\s*[:：]?\s*(\d+)/) ?? n.match(/(\d+)\s*(?:اشخاص|افراد|حصص|servings|people|portions)/);
     if (sv) { servings = +sv[1]; continue; }
+    // Arabic dual: "يكفي شخصين" / "لشخصين" / "حصتين"
+    if (n.length < 40 && /(شخصين|فردين|حصتين)/.test(n)) { servings = 2; continue; }
     if (/(وقت التحضير|مده التحضير|prep(aration)? time|prep)/.test(n) && minutesIn(n) != null && n.length < 60) { prepMinutes = minutesIn(n); continue; }
     if (/(وقت الطهي|وقت الطبخ|مده الطهي|cook(ing)? time|bake time)/.test(n) && minutesIn(n) != null && n.length < 60) { cookMinutes = minutesIn(n); continue; }
 

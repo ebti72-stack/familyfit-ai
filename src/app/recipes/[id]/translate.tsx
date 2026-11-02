@@ -28,7 +28,7 @@ export default function Translate() {
   if (loading || !tr) return <Screen header={<TopBar title={t('tr.title')} />}><Skeleton height={200} r={24} /></Screen>;
   if (!r || !viewingMember) return <Screen header={<TopBar title={t('tr.title')} />}><Banner tone="warning" text={t('rd.notFound')} /></Screen>;
   const rtl = isRtl(lang);
-  const inputStyle = { borderRadius: radius.md, backgroundColor: th.surface, borderWidth: 1, borderColor: th.border, padding: 12, color: th.text, fontFamily: fonts.regular, fontSize: 15, textAlign: rtl ? 'right' : 'left', writingDirection: rtl ? 'rtl' : 'ltr' } as const;
+  const inputStyle = { borderRadius: radius.md, backgroundColor: th.surface, borderWidth: 1, borderColor: th.border, padding: 12, color: th.text, fontFamily: fonts.regular, fontSize: 15, textAlign: rtl ? 'right' : 'left' } as const;
   const sourceSteps = r.steps.map((s) => s.text);
   const edit = (patch: Partial<typeof tr>) => {
     const next = { ...tr, ...patch, edited: true };

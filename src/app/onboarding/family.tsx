@@ -14,12 +14,12 @@ type Mode = 'personal' | 'group';
 
 export default function FamilySetup() {
   const { t } = useI18n();
-  const { setMembership, theme } = useApp();
+  const { setMembership, theme, session } = useApp();
   const [mode, setMode] = useState<Mode | null>(null);
   const [tab, setTab] = useState<'create' | 'join'>('create');
   const [kind, setKind] = useState<Exclude<GroupKind, 'personal'>>('family');
   const [groupName, setGroupName] = useState('');
-  const [myName, setMyName] = useState('');
+  const [myName, setMyName] = useState(session?.displayName ?? '');
   const [code, setCode] = useState('');
   const [role, setRole] = useState<MemberRole>('adult');
   const [emoji, setEmoji] = useState('👩');
@@ -133,7 +133,7 @@ export default function FamilySetup() {
       {isLocal && backend instanceof LocalBackend && (
         <View style={{ gap: 8, borderRadius: radius.lg }}>
           <Button kind="secondary" icon="people-outline" title={t('family.demo')} disabled={!myName.trim()} onPress={() => go(() => (backend as LocalBackend).seedDemoFamily(myName.trim()))} />
-          <Txt v="caption" faint center>{t('family.demoHint')}</Txt>
+          <Txt v="caption" faint center>{myName.trim() ? t('family.demoHint') : t('family.demoNeedsName')}</Txt>
           <Banner tone="warning" text={t('local.banner')} />
         </View>
       )}

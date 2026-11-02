@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs } from 'expo-router/tabs';
+import type { BottomTabBarProps } from 'expo-router/build/layouts/Tabs';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { haptic, Icon, Txt, type IconName } from '../../components/ui';
+import { dirStyle, haptic, Icon, Txt, type IconName } from '../../components/ui';
 import { useI18n, type StringKey } from '../../i18n';
 import { useApp } from '../../state/app';
 import { brand, cardShadow, radius } from '../../theme';
@@ -15,13 +16,13 @@ const ITEMS: Record<string, { icon: IconName; active: IconName; label: StringKey
   family: { icon: 'people-outline', active: 'people', label: 'tab.family' },
 };
 
-function TabBar({ state, navigation }: any) {
+function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { theme: t, membership } = useApp();
-  const { t: tr } = useI18n();
+  const { t: tr, rtl } = useI18n();
   const kind = membership?.family.kind ?? 'family';
   const insets = useSafeAreaInsets();
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: Math.max(insets.bottom, 12), paddingHorizontal: 16, alignItems: 'center' }}>
+    <View pointerEvents="box-none" style={{ ...dirStyle(rtl), position: 'absolute', left: 0, right: 0, bottom: 0, paddingBottom: Math.max(insets.bottom, 12), paddingHorizontal: 16, alignItems: 'center' }}>
       <View style={[{
         flexDirection: 'row', alignItems: 'center', backgroundColor: t.elevated, borderRadius: radius.xl, height: 68, paddingHorizontal: 8,
         width: '100%', maxWidth: 520, borderWidth: 1, borderColor: t.border,
@@ -36,8 +37,9 @@ function TabBar({ state, navigation }: any) {
           const focused = state.index === i;
           const onPress = () => {
             haptic();
-            const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-            if (!focused && !e.defaultPrevented) navigation.navigate(route.name);
+            // expo-router 58 passes an emitter + navigateToTab (there is no `navigation` prop).
+            const e = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!focused && !e.defaultPrevented) navigateToTab(route.key);
           };
           if (route.name === 'ai') {
             return (
@@ -67,7 +69,7 @@ function TabBar({ state, navigation }: any) {
 export default function TabsLayout() {
   const t = useApp().theme;
   return (
-    <Tabs tabBar={(props: any) => <TabBar {...props} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.bg } } as any}>
+    <Tabs tabBar={(props: BottomTabBarProps) => <TabBar {...props} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: t.bg } } as any}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="nutrition" />
       <Tabs.Screen name="ai" />

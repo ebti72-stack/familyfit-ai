@@ -108,7 +108,7 @@ export class LocalBackend implements Backend {
   async getSession(): Promise<Session | null> {
     const db = await this.load();
     const u = db.users.find((x) => x.id === db.sessionUserId);
-    return u ? { userId: u.id, email: u.email } : null;
+    return u ? { userId: u.id, email: u.email, displayName: u.displayName } : null;
   }
   onAuthChange(cb: (s: Session | null) => void) {
     this.listeners.add(cb);
@@ -126,7 +126,7 @@ export class LocalBackend implements Backend {
     db.sessionUserId = u.id;
     db.prefs[u.id] = { ...DEFAULT_PREFS };
     await this.save();
-    this.emit({ userId: u.id, email: e });
+    this.emit({ userId: u.id, email: e, displayName: u.displayName });
     return { needsConfirmation: false };
   }
   async signInEmail(email: string, password: string) {
@@ -136,7 +136,7 @@ export class LocalBackend implements Backend {
     if (!u || u.passwordHash !== (await this.hash(e, password))) throw new BackendError('auth', 'invalid');
     db.sessionUserId = u.id;
     await this.save();
-    this.emit({ userId: u.id, email: e });
+    this.emit({ userId: u.id, email: e, displayName: u.displayName });
   }
   async sendPhoneOtp(): Promise<void> {
     throw new BackendError('not_configured', 'phone');

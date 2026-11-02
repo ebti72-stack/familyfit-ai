@@ -793,6 +793,14 @@ export const ar = {
   'me.joinBody': 'أدخل رمز الدعوة الذي وصلك. ستظهر المجموعة كمساحة جديدة، ويبقى سجلك الشخصي هنا.',
   'rec.tab.friends': 'الأصدقاء',
   'home.friends': 'الأصدقاء اليوم',
+  'fast.dowS.0': 'أحد',
+  'fast.dowS.1': 'إثنين',
+  'fast.dowS.2': 'ثلاثاء',
+  'fast.dowS.3': 'أربعاء',
+  'fast.dowS.4': 'خميس',
+  'fast.dowS.5': 'جمعة',
+  'fast.dowS.6': 'سبت',
+  'family.demoNeedsName': 'اكتب اسمك في الأعلى أولاً لتجربة العائلة التجريبية.',
 };
 
 export type StringKey = keyof typeof ar;
@@ -1592,4 +1600,12 @@ export const en: Record<StringKey, string> = {
   'me.joinBody': 'Enter the invite code you received. The group appears as a new space; your personal log stays here.',
   'rec.tab.friends': 'Friends',
   'home.friends': 'Friends today',
+  'fast.dowS.0': 'Su',
+  'fast.dowS.1': 'Mo',
+  'fast.dowS.2': 'Tu',
+  'fast.dowS.3': 'We',
+  'fast.dowS.4': 'Th',
+  'fast.dowS.5': 'Fr',
+  'fast.dowS.6': 'Sa',
+  'family.demoNeedsName': 'Type your name above first to try the demo family.',
 };

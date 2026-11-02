@@ -24,6 +24,8 @@ export default function Review() {
   const [showSource, setShowSource] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Text while typing, so clearing the field does not snap it back to 1.
+  const [servingsText, setServingsText] = useState<string | null>(null);
   const nut = useMemo(() => (r ? computeRecipeNutrition(r) : null), [r]);
 
   if (!r || !nut) {
@@ -72,7 +74,9 @@ export default function Review() {
           <View style={{ gap: 12 }}>
             <Field label={t('rev.recipeName')} value={r.title} onChangeText={(v) => up({ title: v })} />
             <Row gap={10}>
-              <View style={{ flex: 1 }}><Field label={t('rev.servings')} value={String(r.servings)} onChangeText={(v) => up({ servings: Math.max(1, intOrNull(v) ?? 1) })} keyboardType="number-pad" /></View>
+              <View style={{ flex: 1 }}><Field label={t('rev.servings')} value={servingsText ?? String(r.servings)} keyboardType="number-pad"
+                onChangeText={(v) => { setServingsText(v); const k = intOrNull(v); if (k && k > 0) up({ servings: k }); }}
+                onBlur={() => setServingsText(null)} /></View>
               <View style={{ flex: 1 }}><Field label={t('rev.prep')} value={r.prepMinutes != null ? String(r.prepMinutes) : ''} onChangeText={(v) => up({ prepMinutes: intOrNull(v) })} keyboardType="number-pad" /></View>
               <View style={{ flex: 1 }}><Field label={t('rev.cook')} value={r.cookMinutes != null ? String(r.cookMinutes) : ''} onChangeText={(v) => up({ cookMinutes: intOrNull(v) })} keyboardType="number-pad" /></View>
             </Row>

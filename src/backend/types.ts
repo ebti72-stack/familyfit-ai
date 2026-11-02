@@ -10,6 +10,8 @@ export interface Session {
   userId: string;
   email: string | null;
   phone?: string | null;
+  /** Name given at sign-up, used to pre-fill onboarding. */
+  displayName?: string | null;
 }
 
 export interface Membership {

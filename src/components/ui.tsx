@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, type ReactNode } from 'react';
 import {
-  ActivityIndicator, Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,15 @@ import { useTheme } from '../state/app';
 import { cardShadow, fonts, radius, type Theme } from '../theme';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
+
+/**
+ * Explicit layout direction for native views. Expo Go (Fabric) can report I18nManager.isRTL = true
+ * without mirroring rows, so screens, sheets and the tab bar set Yoga's `direction` themselves.
+ * The web build uses <html dir> instead.
+ */
+export function dirStyle(rtl: boolean): ViewStyle {
+  return Platform.OS === 'web' ? {} : { direction: rtl ? 'rtl' : 'ltr' };
+}
 
 export function haptic(kind: 'light' | 'success' | 'warning' = 'light') {
   if (Platform.OS === 'web') return;
@@ -36,13 +45,15 @@ const VARIANTS: Record<Variant, TextStyle> = {
 };
 
 export function Txt({
-  v = 'body', color, muted, faint, center, style, children, numberOfLines,
-}: { v?: Variant; color?: string; muted?: boolean; faint?: boolean; center?: boolean; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number }) {
+  v = 'body', color, muted, faint, center, style, children, numberOfLines, adjustsFontSizeToFit, minimumFontScale,
+}: { v?: Variant; color?: string; muted?: boolean; faint?: boolean; center?: boolean; style?: StyleProp<TextStyle>; children: ReactNode; numberOfLines?: number; adjustsFontSizeToFit?: boolean; minimumFontScale?: number }) {
   const t = useTheme();
   const { rtl } = useI18n();
   return (
     <Text
       numberOfLines={numberOfLines}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
+      minimumFontScale={minimumFontScale}
       style={[
         VARIANTS[v],
         { color: color ?? (faint ? t.textFaint : muted ? t.textMuted : t.text), textAlign: center ? 'center' : rtl ? 'right' : 'left', writingDirection: rtl ? 'rtl' : 'ltr' },
@@ -67,11 +78,13 @@ export function Screen({ children, scroll = true, padded = true, header, footer,
   children: ReactNode; scroll?: boolean; padded?: boolean; header?: ReactNode; footer?: ReactNode; contentStyle?: StyleProp<ViewStyle>;
 }) {
   const t = useTheme();
+  const { rtl } = useI18n();
   const body = scroll ? (
     <ScrollView
       contentContainerStyle={[{ paddingHorizontal: padded ? 20 : 0, paddingBottom: 140, paddingTop: 8, gap: 16 }, contentStyle]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
     >
       {children}
     </ScrollView>
@@ -79,12 +92,14 @@ export function Screen({ children, scroll = true, padded = true, header, footer,
     <View style={[{ flex: 1, paddingHorizontal: padded ? 20 : 0 }, contentStyle]}>{children}</View>
   );
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }} edges={['top']}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
-        {header}
-        {body}
-        {footer}
-      </View>
+    <SafeAreaView style={[{ flex: 1, backgroundColor: t.bg }, dirStyle(rtl)]} edges={['top']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
+          {header}
+          {body}
+          {footer}
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -209,12 +224,14 @@ export function Field({ label, hint, error, ...props }: TextInputProps & { label
       <Txt v="label" muted>{label}</Txt>
       <TextInput
         placeholderTextColor={t.textFaint}
+        returnKeyType={props.multiline ? undefined : 'done'}
+        submitBehavior={props.multiline ? undefined : 'blurAndSubmit'}
         {...props}
         style={[{
           height: props.multiline ? 88 : 52, borderRadius: radius.md, backgroundColor: t.surface, borderWidth: 1, borderColor: error ? t.danger : t.border,
           paddingHorizontal: 16, paddingTop: props.multiline ? 12 : 0, color: t.text, fontFamily: fonts.regular, fontSize: 16,
-          textAlign: props.keyboardType === 'email-address' || props.secureTextEntry ? (rtl ? 'right' : 'left') : rtl ? 'right' : 'left',
-          writingDirection: rtl ? 'rtl' : 'ltr',
+          // No forced writingDirection: typed text keeps its own direction, so English stays readable in Arabic UI.
+          textAlign: rtl ? 'right' : 'left',
         } as TextStyle, props.style]}
       />
       {error ? <Txt v="caption" color={t.danger}>{error}</Txt> : hint ? <Txt v="caption" faint>{hint}</Txt> : null}
@@ -280,6 +297,7 @@ export function Pill({ text, color, bg, icon }: { text: string; color?: string; 
 /** Bottom sheet for details and quick actions. */
 export function Sheet({ visible, onClose, title, children }: { visible: boolean; onClose: () => void; title?: string; children: ReactNode }) {
   const t = useTheme();
+  const { rtl } = useI18n();
   const insets = useSafeAreaInsets();
   const y = useRef(new Animated.Value(400)).current;
   useEffect(() => {
@@ -288,6 +306,7 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
   }, [visible, y]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={[{ flex: 1 }, dirStyle(rtl)]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Pressable style={{ flex: 1, backgroundColor: 'rgba(8,20,16,0.45)' }} onPress={onClose} accessibilityLabel="close" />
       <Animated.View style={{
         transform: [{ translateY: y }], backgroundColor: t.bg, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
@@ -295,8 +314,9 @@ export function Sheet({ visible, onClose, title, children }: { visible: boolean;
       }}>
         <View style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: t.track, marginBottom: 14 }} />
         {title ? <Txt v="h2" style={{ marginBottom: 12 }}>{title}</Txt> : null}
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 14 }}>{children}</ScrollView>
+        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ gap: 14 }}>{children}</ScrollView>
       </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

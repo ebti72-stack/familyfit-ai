@@ -74,10 +74,10 @@ export class SupabaseBackend implements Backend {
   async getSession(): Promise<Session | null> {
     const { data } = await this.sb.auth.getSession();
     const u = data.session?.user;
-    return u ? { userId: u.id, email: u.email ?? null, phone: u.phone ?? null } : null;
+    return u ? { userId: u.id, email: u.email ?? null, phone: u.phone ?? null, displayName: (u.user_metadata?.display_name as string | undefined) ?? null } : null;
   }
   onAuthChange(cb: (s: Session | null) => void) {
-    const { data } = this.sb.auth.onAuthStateChange((_e, s) => cb(s?.user ? { userId: s.user.id, email: s.user.email ?? null, phone: s.user.phone ?? null } : null));
+    const { data } = this.sb.auth.onAuthStateChange((_e, s) => cb(s?.user ? { userId: s.user.id, email: s.user.email ?? null, phone: s.user.phone ?? null, displayName: (s.user.user_metadata?.display_name as string | undefined) ?? null } : null));
     return () => data.subscription.unsubscribe();
   }
   async signUpEmail(email: string, password: string, displayName: string) {

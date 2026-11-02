@@ -152,7 +152,7 @@ export default function FastingHome() {
                   <IconButton size={36} tone="alt" icon="chevron-forward" flipRtl label="next" onPress={() => shift(1)} />
                 </Row>
                 <Row gap={0}>
-                  {[0, 1, 2, 3, 4, 5, 6].map((d) => <Txt key={d} v="caption" muted center style={{ flex: 1 }} numberOfLines={1}>{t(`fast.dow.${d}` as StringKey).slice(0, lang === 'ar' ? 3 : 2)}</Txt>)}
+                  {[0, 1, 2, 3, 4, 5, 6].map((d) => <Txt key={d} v="caption" muted center style={{ flex: 1, fontSize: 11 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t(`fast.dowS.${d}` as StringKey)}</Txt>)}
                 </Row>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                   {Array.from({ length: lead }).map((_, i) => <View key={`b${i}`} style={{ width: `${100 / 7}%`, height: 50 }} />)}
